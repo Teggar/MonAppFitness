@@ -1,98 +1,223 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import React from 'react';
+import { StyleSheet, View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useData } from '../context/DataContext';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const router = useRouter();
+  const { seances } = useData();
+  
+  // DEBUG: Affichons ce qu'on reçoit
+  console.log('HomeScreen - Nombre de séances:', seances.length);
+  console.log('HomeScreen - Séances:', seances);
+  
+  // Calculer les statistiques depuis les vraies données
+  const totalSeances = seances.length;
+  const derniereSeance = seances[0]; // La plus récente (en premier)
+  
+  // Trouver l'exercice le plus fréquent
+  const exercicesCount = seances.reduce((acc, seance) => {
+    acc[seance.exercice] = (acc[seance.exercice] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  
+  const exerciceFavori = Object.keys(exercicesCount).length > 0 
+    ? Object.entries(exercicesCount).sort(([,a], [,b]) => b - a)[0][0]
+    : "Aucun pour l'instant";
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  const allerAuxSeances = () => {
+    router.push('/(tabs)/explore');
+  };
+
+  return (
+    <ScrollView style={styles.container}>
+      {/* En-tête */}
+      <View style={styles.header}>
+        <Text style={styles.title}>💪 Mon App Fitness</Text>
+        <Text style={styles.subtitle}>Suivez votre progression</Text>
+      </View>
+
+      {/* DEBUG: Affichage temporaire */}
+      <View style={[styles.card, {backgroundColor: '#ffebcc'}]}>
+        <Text style={styles.cardTitle}>🐛 DEBUG (temporaire)</Text>
+        <Text style={styles.cardText}>Séances trouvées: {seances.length}</Text>
+        <Text style={styles.cardText}>
+          Données: {seances.length > 0 ? JSON.stringify(seances[0]) : 'Aucune'}
+        </Text>
+      </View>
+
+      {/* Bouton principal - Nouvelle séance */}
+      <TouchableOpacity style={styles.mainButton} onPress={allerAuxSeances}>
+        <Text style={styles.mainButtonText}>🏋️ Nouvelle Séance</Text>
+      </TouchableOpacity>
+
+      {/* Dernière séance */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>📊 Dernière Séance</Text>
+        {!derniereSeance ? (
+          <Text style={styles.noDataText}>Aucune séance enregistrée</Text>
+        ) : (
+          <View>
+            <Text style={styles.cardText}>Exercice: {derniereSeance.exercice}</Text>
+            <Text style={styles.cardText}>Date: {derniereSeance.date}</Text>
+            <Text style={styles.cardText}>
+              {derniereSeance.series} séries × {derniereSeance.repetitions} reps à {derniereSeance.poids}kg
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* Statistiques rapides */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>📈 Vos Stats</Text>
+        <Text style={styles.cardText}>Total exercices: {totalSeances}</Text>
+        <Text style={styles.cardText}>Exercice favori: {exerciceFavori}</Text>
+        <Text style={styles.cardText}>
+          {totalSeances === 0 
+            ? "Prochain objectif: Première séance !" 
+            : `Continuez comme ça ! ${totalSeances} exercice${totalSeances > 1 ? 's' : ''} fait${totalSeances > 1 ? 's' : ''}`
+          }
+        </Text>
+      </View>
+
+      {/* Boutons secondaires */}
+      <View style={styles.buttonRow}>
+        <TouchableOpacity style={styles.secondaryButton} onPress={allerAuxSeances}>
+          <Text style={styles.secondaryButtonText}>📝 Historique</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.secondaryButton}>
+          <Text style={styles.secondaryButtonText}>📊 Progression</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Aperçu des derniers exercices */}
+      {seances.length > 0 && (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>🔥 Derniers exercices</Text>
+          {seances.slice(0, 3).map((seance) => (
+            <View key={seance.id} style={styles.miniSeance}>
+              <Text style={styles.miniSeanceText}>
+                {seance.exercice} - {seance.poids}kg × {seance.repetitions}
+              </Text>
+              <Text style={styles.miniSeanceDate}>{seance.date}</Text>
+            </View>
+          ))}
+          {seances.length > 3 && (
+            <TouchableOpacity onPress={allerAuxSeances}>
+              <Text style={styles.voirPlus}>Voir plus...</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+    padding: 20,
+  },
+  header: {
+    marginBottom: 30,
+    marginTop: 20,
     alignItems: 'center',
-    gap: 8,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 5,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  subtitle: {
+    fontSize: 16,
+    color: '#666',
+  },
+  mainButton: {
+    backgroundColor: '#4CAF50',
+    padding: 20,
+    borderRadius: 15,
+    alignItems: 'center',
+    marginBottom: 25,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  mainButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  card: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 15,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 10,
+  },
+  cardText: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 5,
+  },
+  noDataText: {
+    fontSize: 16,
+    color: '#999',
+    fontStyle: 'italic',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  secondaryButton: {
+    backgroundColor: '#2196F3',
+    padding: 15,
+    borderRadius: 10,
+    flex: 0.48,
+    alignItems: 'center',
+  },
+  secondaryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  miniSeance: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  miniSeanceText: {
+    fontSize: 14,
+    color: '#333',
+    flex: 1,
+  },
+  miniSeanceDate: {
+    fontSize: 12,
+    color: '#999',
+  },
+  voirPlus: {
+    fontSize: 14,
+    color: '#4CAF50',
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 10,
   },
 });

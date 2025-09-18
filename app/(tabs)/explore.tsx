@@ -1,112 +1,287 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, View, Text, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
 
-import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+export default function SeancesScreen() {
+  // État pour stocker nos séances (pour l'instant en local)
+  const [seances, setSeances] = useState([]);
+  const [showAddForm, setShowAddForm] = useState(false);
+  
+  // États pour le formulaire d'ajout
+  const [exercice, setExercice] = useState('');
+  const [poids, setPoids] = useState('');
+  const [repetitions, setRepetitions] = useState('');
+  const [series, setSeries] = useState('');
 
-export default function TabTwoScreen() {
+  const ajouterExercice = () => {
+    if (!exercice || !poids || !repetitions || !series) {
+      Alert.alert('Erreur', 'Veuillez remplir tous les champs');
+      return;
+    }
+
+    const nouvelExercice = {
+      id: Date.now(), // ID simple pour l'instant
+      exercice: exercice,
+      poids: parseFloat(poids),
+      repetitions: parseInt(repetitions),
+      series: parseInt(series),
+      date: new Date().toLocaleDateString('fr-FR')
+    };
+
+    setSeances([nouvelExercice, ...seances]);
+    
+    // Reset du formulaire
+    setExercice('');
+    setPoids('');
+    setRepetitions('');
+    setSeries('');
+    setShowAddForm(false);
+    
+    Alert.alert('Succès', 'Exercice ajouté !');
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Explore
-        </ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+    <ScrollView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>🏋️ Mes Séances</Text>
+        
+        <TouchableOpacity 
+          style={styles.addButton}
+          onPress={() => setShowAddForm(!showAddForm)}
+        >
+          <Text style={styles.addButtonText}>
+            {showAddForm ? '❌ Annuler' : '➕ Ajouter Exercice'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Formulaire d'ajout */}
+      {showAddForm && (
+        <View style={styles.formCard}>
+          <Text style={styles.formTitle}>Nouvel Exercice</Text>
+          
+          <TextInput
+            style={styles.input}
+            placeholder="Nom de l'exercice (ex: Développé couché)"
+            value={exercice}
+            onChangeText={setExercice}
+          />
+          
+          <View style={styles.inputRow}>
+            <TextInput
+              style={[styles.input, styles.smallInput]}
+              placeholder="Poids (kg)"
+              value={poids}
+              onChangeText={setPoids}
+              keyboardType="numeric"
+            />
+            
+            <TextInput
+              style={[styles.input, styles.smallInput]}
+              placeholder="Répétitions"
+              value={repetitions}
+              onChangeText={setRepetitions}
+              keyboardType="numeric"
+            />
+            
+            <TextInput
+              style={[styles.input, styles.smallInput]}
+              placeholder="Séries"
+              value={series}
+              onChangeText={setSeries}
+              keyboardType="numeric"
+            />
+          </View>
+          
+          <TouchableOpacity style={styles.submitButton} onPress={ajouterExercice}>
+            <Text style={styles.submitButtonText}>✅ Ajouter</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Liste des séances */}
+      <View style={styles.seancesList}>
+        <Text style={styles.sectionTitle}>
+          📋 Historique ({seances.length} exercices)
+        </Text>
+        
+        {seances.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>🏃‍♂️ Aucun exercice enregistré</Text>
+            <Text style={styles.emptySubtext}>Ajoutez votre premier exercice !</Text>
+          </View>
+        ) : (
+          seances.map((seance) => (
+            <View key={seance.id} style={styles.seanceCard}>
+              <View style={styles.seanceHeader}>
+                <Text style={styles.exerciceNom}>{seance.exercice}</Text>
+                <Text style={styles.seanceDate}>{seance.date}</Text>
+              </View>
+              
+              <View style={styles.seanceStats}>
+                <View style={styles.stat}>
+                  <Text style={styles.statLabel}>Poids</Text>
+                  <Text style={styles.statValue}>{seance.poids} kg</Text>
+                </View>
+                
+                <View style={styles.stat}>
+                  <Text style={styles.statLabel}>Répétitions</Text>
+                  <Text style={styles.statValue}>{seance.repetitions}</Text>
+                </View>
+                
+                <View style={styles.stat}>
+                  <Text style={styles.statLabel}>Séries</Text>
+                  <Text style={styles.statValue}>{seance.series}</Text>
+                </View>
+              </View>
+            </View>
+          ))
+        )}
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+    padding: 20,
   },
-  titleContainer: {
+  header: {
+    marginBottom: 20,
+    marginTop: 20,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+  addButton: {
+    backgroundColor: '#4CAF50',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  addButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  formCard: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 15,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  formTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    padding: 12,
+    borderRadius: 8,
+    fontSize: 16,
+    marginBottom: 10,
+    backgroundColor: '#f9f9f9',
+  },
+  inputRow: {
     flexDirection: 'row',
-    gap: 8,
+    justifyContent: 'space-between',
+  },
+  smallInput: {
+    flex: 0.3,
+    marginRight: 5,
+  },
+  submitButton: {
+    backgroundColor: '#2196F3',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  submitButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  seancesList: {
+    flex: 1,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 15,
+  },
+  emptyState: {
+    backgroundColor: 'white',
+    padding: 40,
+    borderRadius: 15,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 18,
+    color: '#666',
+    marginBottom: 5,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#999',
+  },
+  seanceCard: {
+    backgroundColor: 'white',
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  seanceHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  exerciceNom: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    flex: 1,
+  },
+  seanceDate: {
+    fontSize: 14,
+    color: '#666',
+  },
+  seanceStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  stat: {
+    alignItems: 'center',
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#999',
+    marginBottom: 2,
+  },
+  statValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#4CAF50',
   },
 });

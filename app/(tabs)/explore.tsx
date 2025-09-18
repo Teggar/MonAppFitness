@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
+import { useData } from '../context/DataContext';
 
 export default function SeancesScreen() {
-  // État pour stocker nos séances (pour l'instant en local)
-  const [seances, setSeances] = useState([]);
+  // Utiliser le contexte au lieu du state local
+  const { seances, ajouterExercice } = useData();
   const [showAddForm, setShowAddForm] = useState(false);
   
   // États pour le formulaire d'ajout
@@ -12,14 +13,13 @@ export default function SeancesScreen() {
   const [repetitions, setRepetitions] = useState('');
   const [series, setSeries] = useState('');
 
-  const ajouterExercice = () => {
+  const ajouterNouvelExercice = () => {
     if (!exercice || !poids || !repetitions || !series) {
       Alert.alert('Erreur', 'Veuillez remplir tous les champs');
       return;
     }
 
     const nouvelExercice = {
-      id: Date.now(), // ID simple pour l'instant
       exercice: exercice,
       poids: parseFloat(poids),
       repetitions: parseInt(repetitions),
@@ -27,7 +27,8 @@ export default function SeancesScreen() {
       date: new Date().toLocaleDateString('fr-FR')
     };
 
-    setSeances([nouvelExercice, ...seances]);
+    // Utiliser la fonction du contexte
+    ajouterExercice(nouvelExercice);
     
     // Reset du formulaire
     setExercice('');
@@ -92,7 +93,7 @@ export default function SeancesScreen() {
             />
           </View>
           
-          <TouchableOpacity style={styles.submitButton} onPress={ajouterExercice}>
+          <TouchableOpacity style={styles.submitButton} onPress={ajouterNouvelExercice}>
             <Text style={styles.submitButtonText}>✅ Ajouter</Text>
           </TouchableOpacity>
         </View>

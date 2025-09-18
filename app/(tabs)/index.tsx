@@ -8,6 +8,14 @@ import { useData } from '../context/DataContext';
 export default function HomeScreen() {
   const router = useRouter();
   const { seances, isLoading, user, signOut } = useData();
+  // AJOUTEZ CES LOGS DE DEBUG
+  console.log('=== DEBUG HOME SCREEN ===');
+  console.log('Timestamp:', new Date().toISOString());
+  console.log('User connecté:', user?.id);
+  console.log('IsLoading:', isLoading);
+  console.log('Nombre de séances reçues:', seances?.length);
+  console.log('Stack trace:', new Error().stack?.split('\n')[1]); // Voir d'où vient l'appel
+  console.log('========================');
   
   console.log('HomeScreen - Nombre de séances:', seances.length);
   

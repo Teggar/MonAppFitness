@@ -132,6 +132,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
+  // ✅ NOUVEAU useEffect pour charger les données quand user change
+  useEffect(() => {
+    if (user?.id) {
+      console.log('🔄 Utilisateur connecté, chargement des données...');
+      chargerSeances();
+      chargerDonnees();
+      chargerModelesExercices();
+    }
+  }, [user]); // Se déclenche uniquement quand user change
+
   // ========== NOUVELLES MÉTHODES POUR LES SÉANCES ==========
 
   // Charger les séances avec leurs exercices
@@ -139,12 +149,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setIsLoading(true);
       
+      // ✅ AJOUTEZ CETTE VÉRIFICATION
+      if (!user?.id) {
+        console.log('Pas d\'utilisateur connecté, arrêt du chargement des séances');
+        setIsLoading(false);
+        return;
+      }
+      // AJOUTEZ CE LOG POUR VÉRIFIER
+      console.log('Chargement des séances pour user:', user.id);
+      
       const { data: seancesData, error: seancesError } = await supabase
         .from('seances')
         .select(`
           *,
           exercices(*)
         `)
+        .eq('user_id', user.id) // AJOUTEZ CETTE LIGNE
         .order('date_seance', { ascending: false });
 
       if (seancesError) {
@@ -155,6 +175,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         return;
       }
+
+      // AJOUTEZ CE LOG POUR VÉRIFIER LES DONNÉES RÉCUPÉRÉES
+      console.log('Données brutes récupérées:', seancesData);
 
       // Formater les données
       const seancesFormatees = seancesData?.map(seance => ({
@@ -167,7 +190,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })) || [];
 
       setSeances(seancesFormatees);
-      console.log('Séances chargées:', seancesFormatees.length);
+      console.log('Séances formatées chargées:', seancesFormatees.length);
       
     } catch (error) {
       console.error('Erreur lors du chargement des séances:', error);
@@ -187,14 +210,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setIsLoading(true);
 
-      // 1. Créer la séance
+      // 1. Créer la séance AVEC user_id
       const { data: seanceData, error: seanceError } = await supabase
         .from('seances')
         .insert([{
           nom: nouvelleSeance.nom,
           date_seance: nouvelleSeance.date_seance,
           duree_minutes: nouvelleSeance.duree_minutes,
-          notes: nouvelleSeance.notes
+          notes: nouvelleSeance.notes,
+          user_id: user?.id // AJOUTEZ CETTE LIGNE
         }])
         .select()
         .single();
@@ -205,7 +229,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      // 2. Ajouter les exercices
+      // 2. Ajouter les exercices AVEC user_id
       if (nouvelleSeance.exercices.length > 0) {
         const exercicesData = nouvelleSeance.exercices.map(ex => ({
           exercice: ex.exercice,
@@ -213,7 +237,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           repetitions: ex.repetitions,
           series: ex.series,
           seance_id: seanceData.id,
-          date_exercice: nouvelleSeance.date_seance
+          date_exercice: nouvelleSeance.date_seance,
+          user_id: user?.id // AJOUTEZ CETTE LIGNE AUSSI
         }));
 
         const { error: exercicesError } = await supabase
@@ -315,9 +340,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Charger les exercices individuels (sans séance)
   const chargerDonnees = async () => {
     try {
+      if (!user?.id) {
+        console.log('Pas d\'utilisateur connecté, arrêt du chargement des exercices');
+        return;
+      }
       const { data, error } = await supabase
         .from('exercices')
         .select('*')
+        .eq('user_id', user.id) // AJOUTEZ CETTE LIGNE
         .is('seance_id', null) // Seulement les exercices sans séance
         .order('created_at', { ascending: false });
 
@@ -478,7 +508,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       supprimerSeance,
       
       // Exercices individuels (rétrocompatibilité)
-      seances: exercicesIndividuels, // Alias pour compatibilité avec l'ancien code
+      //seances: exercicesIndividuels, // Alias pour compatibilité avec l'ancien code
       ajouterExercice,
       chargerDonnees,
       supprimerExercice,

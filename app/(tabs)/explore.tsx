@@ -1,143 +1,191 @@
+// app/(tabs)/explore.tsx - Historique des séances
+
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useData } from '../context/DataContext';
 
-export default function SeancesScreen() {
-  // Utiliser le contexte au lieu du state local
-  const { seances, ajouterExercice } = useData();
-  const [showAddForm, setShowAddForm] = useState(false);
-  
-  // États pour le formulaire d'ajout
-  const [exercice, setExercice] = useState('');
-  const [poids, setPoids] = useState('');
-  const [repetitions, setRepetitions] = useState('');
-  const [series, setSeries] = useState('');
+export default function ExploreScreen() {
+  const router = useRouter();
+  const { seances, supprimerSeance, isLoading } = useData();
+  const [expandedSeance, setExpandedSeance] = useState<number | null>(null);
 
-  const ajouterNouvelExercice = () => {
-    if (!exercice || !poids || !repetitions || !series) {
-      Alert.alert('Erreur', 'Veuillez remplir tous les champs');
-      return;
-    }
+  // Naviguer vers nouvelle séance
+  const creerNouvelleSeance = () => {
+    router.push('/(tabs)/nouvelle-seance');
+  };
 
-    const nouvelExercice = {
-      exercice: exercice,
-      poids: parseFloat(poids),
-      repetitions: parseInt(repetitions),
-      series: parseInt(series),
-      date: new Date().toLocaleDateString('fr-FR')
-    };
+  // Basculer l'affichage des détails d'une séance
+  const toggleSeanceDetails = (seanceId: number) => {
+    setExpandedSeance(expandedSeance === seanceId ? null : seanceId);
+  };
 
-    // Utiliser la fonction du contexte
-    ajouterExercice(nouvelExercice);
-    
-    // Reset du formulaire
-    setExercice('');
-    setPoids('');
-    setRepetitions('');
-    setSeries('');
-    setShowAddForm(false);
-    
-    Alert.alert('Succès', 'Exercice ajouté !');
+  // Confirmer la suppression d'une séance
+  const confirmerSuppression = (seance: any) => {
+    Alert.alert(
+      'Supprimer la séance',
+      `Êtes-vous sûr de vouloir supprimer "${seance.nom}" du ${seance.date} ?`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { 
+          text: 'Supprimer', 
+          style: 'destructive',
+          onPress: () => supprimerSeance(seance.id)
+        }
+      ]
+    );
   };
 
   return (
     <ScrollView style={styles.container}>
+      {/* En-tête */}
       <View style={styles.header}>
-        <Text style={styles.title}>🏋️ Mes Séances</Text>
+        <Text style={styles.title}>📋 Historique des Séances</Text>
         
         <TouchableOpacity 
           style={styles.addButton}
-          onPress={() => setShowAddForm(!showAddForm)}
+          onPress={creerNouvelleSeance}
         >
-          <Text style={styles.addButtonText}>
-            {showAddForm ? '❌ Annuler' : '➕ Ajouter Exercice'}
-          </Text>
+          <Text style={styles.addButtonText}>➕ Nouvelle Séance</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Formulaire d'ajout */}
-      {showAddForm && (
-        <View style={styles.formCard}>
-          <Text style={styles.formTitle}>Nouvel Exercice</Text>
-          
-          <TextInput
-            style={styles.input}
-            placeholder="Nom de l'exercice (ex: Développé couché)"
-            value={exercice}
-            onChangeText={setExercice}
-          />
-          
-          <View style={styles.inputRow}>
-            <TextInput
-              style={[styles.input, styles.smallInput]}
-              placeholder="Poids (kg)"
-              value={poids}
-              onChangeText={setPoids}
-              keyboardType="numeric"
-            />
-            
-            <TextInput
-              style={[styles.input, styles.smallInput]}
-              placeholder="Répétitions"
-              value={repetitions}
-              onChangeText={setRepetitions}
-              keyboardType="numeric"
-            />
-            
-            <TextInput
-              style={[styles.input, styles.smallInput]}
-              placeholder="Séries"
-              value={series}
-              onChangeText={setSeries}
-              keyboardType="numeric"
-            />
+      {/* Résumé rapide */}
+      <View style={styles.summaryCard}>
+        <Text style={styles.summaryTitle}>📊 Résumé</Text>
+        <View style={styles.summaryRow}>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryNumber}>{seances.length}</Text>
+            <Text style={styles.summaryLabel}>Séances</Text>
           </View>
-          
-          <TouchableOpacity style={styles.submitButton} onPress={ajouterNouvelExercice}>
-            <Text style={styles.submitButtonText}>✅ Ajouter</Text>
-          </TouchableOpacity>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryNumber}>
+              {seances.reduce((total, s) => total + (s.exercices?.length || 0), 0)}
+            </Text>
+            <Text style={styles.summaryLabel}>Exercices</Text>
+          </View>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryNumber}>
+              {seances.length > 0 
+                ? Math.round(seances.reduce((total, s) => total + (s.duree_minutes || 0), 0) / seances.length)
+                : 0
+              }
+            </Text>
+            <Text style={styles.summaryLabel}>Min/séance</Text>
+          </View>
         </View>
-      )}
+      </View>
 
       {/* Liste des séances */}
       <View style={styles.seancesList}>
         <Text style={styles.sectionTitle}>
-          📋 Historique ({seances.length} exercices)
+          🏋️ Vos séances ({seances.length})
         </Text>
         
         {seances.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>🏃‍♂️ Aucun exercice enregistré</Text>
-            <Text style={styles.emptySubtext}>Ajoutez votre premier exercice !</Text>
+            <Text style={styles.emptyText}>🎯 Aucune séance enregistrée</Text>
+            <Text style={styles.emptySubtext}>Créez votre première séance d'entraînement !</Text>
+            <TouchableOpacity style={styles.emptyButton} onPress={creerNouvelleSeance}>
+              <Text style={styles.emptyButtonText}>🚀 Commencer maintenant</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           seances.map((seance) => (
             <View key={seance.id} style={styles.seanceCard}>
-              <View style={styles.seanceHeader}>
-                <Text style={styles.exerciceNom}>{seance.exercice}</Text>
-                <Text style={styles.seanceDate}>{seance.date}</Text>
-              </View>
-              
-              <View style={styles.seanceStats}>
-                <View style={styles.stat}>
-                  <Text style={styles.statLabel}>Poids</Text>
-                  <Text style={styles.statValue}>{seance.poids} kg</Text>
+              {/* En-tête de la séance */}
+              <TouchableOpacity 
+                style={styles.seanceHeader}
+                onPress={() => toggleSeanceDetails(seance.id)}
+              >
+                <View style={styles.seanceMainInfo}>
+                  <Text style={styles.seanceNom}>{seance.nom}</Text>
+                  <Text style={styles.seanceDate}>{seance.date}</Text>
+                  
+                  <View style={styles.seanceQuickStats}>
+                    <Text style={styles.quickStat}>
+                      {seance.exercices?.length || 0} exercice{(seance.exercices?.length || 0) > 1 ? 's' : ''}
+                    </Text>
+                    {seance.duree_minutes && (
+                      <Text style={styles.quickStat}>• {seance.duree_minutes} min</Text>
+                    )}
+                  </View>
                 </View>
                 
-                <View style={styles.stat}>
-                  <Text style={styles.statLabel}>Répétitions</Text>
-                  <Text style={styles.statValue}>{seance.repetitions}</Text>
+                <View style={styles.seanceActions}>
+                  <Text style={styles.expandIcon}>
+                    {expandedSeance === seance.id ? '▼' : '▶'}
+                  </Text>
                 </View>
-                
-                <View style={styles.stat}>
-                  <Text style={styles.statLabel}>Séries</Text>
-                  <Text style={styles.statValue}>{seance.series}</Text>
+              </TouchableOpacity>
+
+              {/* Détails expandés */}
+              {expandedSeance === seance.id && (
+                <View style={styles.seanceDetails}>
+                  {/* Notes */}
+                  {seance.notes && (
+                    <View style={styles.notesSection}>
+                      <Text style={styles.notesTitle}>📝 Notes:</Text>
+                      <Text style={styles.notesText}>{seance.notes}</Text>
+                    </View>
+                  )}
+                  
+                  {/* Liste des exercices */}
+                  <View style={styles.exercicesSection}>
+                    <Text style={styles.exercicesTitle}>
+                      💪 Exercices ({seance.exercices?.length || 0}):
+                    </Text>
+                    
+                    {seance.exercices && seance.exercices.length > 0 ? (
+                      seance.exercices.map((exercice, index) => (
+                        <View key={exercice.id} style={styles.exerciceItem}>
+                          <Text style={styles.exerciceNom}>
+                            {index + 1}. {exercice.exercice}
+                          </Text>
+                          <Text style={styles.exerciceStats}>
+                            {exercice.series} × {exercice.repetitions} reps à {exercice.poids}kg
+                          </Text>
+                        </View>
+                      ))
+                    ) : (
+                      <Text style={styles.noExercices}>Aucun exercice enregistré</Text>
+                    )}
+                  </View>
+
+                  {/* Actions */}
+                  <View style={styles.actionsSection}>
+                    <TouchableOpacity 
+                      style={styles.deleteButton}
+                      onPress={() => confirmerSuppression(seance)}
+                    >
+                      <Text style={styles.deleteButtonText}>🗑️ Supprimer</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={styles.duplicateButton}
+                      onPress={() => {
+                        // TODO: Implémenter la duplication
+                        Alert.alert('Info', 'Fonctionnalité de duplication à venir !');
+                      }}
+                    >
+                      <Text style={styles.duplicateButtonText}>📋 Dupliquer</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              </View>
+              )}
             </View>
           ))
         )}
       </View>
+
+      {/* Bouton fixe en bas */}
+      {seances.length > 0 && (
+        <View style={styles.fixedButtonContainer}>
+          <TouchableOpacity style={styles.fixedButton} onPress={creerNouvelleSeance}>
+            <Text style={styles.fixedButtonText}>+ Nouvelle Séance</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -153,7 +201,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#333',
     textAlign: 'center',
@@ -170,7 +218,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  formCard: {
+  summaryCard: {
     backgroundColor: 'white',
     padding: 20,
     borderRadius: 15,
@@ -181,41 +229,29 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  formTitle: {
-    fontSize: 20,
+  summaryTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 15,
     textAlign: 'center',
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    padding: 12,
-    borderRadius: 8,
-    fontSize: 16,
-    marginBottom: 10,
-    backgroundColor: '#f9f9f9',
-  },
-  inputRow: {
+  summaryRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
   },
-  smallInput: {
-    flex: 0.3,
-    marginRight: 5,
-  },
-  submitButton: {
-    backgroundColor: '#2196F3',
-    padding: 15,
-    borderRadius: 10,
+  summaryItem: {
     alignItems: 'center',
-    marginTop: 10,
   },
-  submitButtonText: {
-    color: 'white',
-    fontSize: 16,
+  summaryNumber: {
+    fontSize: 24,
     fontWeight: 'bold',
+    color: '#4CAF50',
+  },
+  summaryLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
   },
   seancesList: {
     flex: 1,
@@ -235,54 +271,167 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     color: '#666',
-    marginBottom: 5,
+    marginBottom: 8,
+    textAlign: 'center',
   },
   emptySubtext: {
     fontSize: 14,
     color: '#999',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  emptyButton: {
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  emptyButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   seanceCard: {
     backgroundColor: 'white',
-    padding: 15,
     borderRadius: 12,
-    marginBottom: 10,
+    marginBottom: 15,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowRadius: 4,
+    elevation: 3,
+    overflow: 'hidden',
   },
   seanceHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    padding: 15,
   },
-  exerciceNom: {
+  seanceMainInfo: {
+    flex: 1,
+  },
+  seanceNom: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
-    flex: 1,
+    marginBottom: 4,
   },
   seanceDate: {
     fontSize: 14,
     color: '#666',
+    marginBottom: 8,
   },
-  seanceStats: {
+  seanceQuickStats: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  stat: {
     alignItems: 'center',
   },
-  statLabel: {
+  quickStat: {
     fontSize: 12,
-    color: '#999',
+    color: '#4CAF50',
+    marginRight: 8,
+    fontWeight: '500',
+  },
+  seanceActions: {
+    paddingLeft: 10,
+  },
+  expandIcon: {
+    fontSize: 16,
+    color: '#666',
+  },
+  seanceDetails: {
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+    padding: 15,
+  },
+  notesSection: {
+    marginBottom: 15,
+  },
+  notesTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 5,
+  },
+  notesText: {
+    fontSize: 14,
+    color: '#666',
+    fontStyle: 'italic',
+  },
+  exercicesSection: {
+    marginBottom: 15,
+  },
+  exercicesTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 10,
+  },
+  exerciceItem: {
+    backgroundColor: '#f8f9fa',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 6,
+  },
+  exerciceNom: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
     marginBottom: 2,
   },
-  statValue: {
+  exerciceStats: {
+    fontSize: 12,
+    color: '#666',
+  },
+  noExercices: {
+    fontSize: 14,
+    color: '#999',
+    fontStyle: 'italic',
+    textAlign: 'center',
+  },
+  actionsSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingTop: 10,
+  },
+  deleteButton: {
+    backgroundColor: '#f44336',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 6,
+    flex: 0.45,
+    alignItems: 'center',
+  },
+  deleteButtonText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  duplicateButton: {
+    backgroundColor: '#2196F3',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 6,
+    flex: 0.45,
+    alignItems: 'center',
+  },
+  duplicateButtonText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  fixedButtonContainer: {
+    marginTop: 20,
+    paddingBottom: 20,
+  },
+  fixedButton: {
+    backgroundColor: '#4CAF50',
+    padding: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  fixedButtonText: {
+    color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#4CAF50',
   },
 });

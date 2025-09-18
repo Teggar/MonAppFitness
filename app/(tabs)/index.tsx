@@ -1,3 +1,5 @@
+// app/(tabs)/index.tsx - Version mise à jour
+
 import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -7,15 +9,18 @@ export default function HomeScreen() {
   const router = useRouter();
   const { seances, isLoading, user, signOut } = useData();
   
-  // DEBUG: Affichons ce qu'on reçoit
   console.log('HomeScreen - Nombre de séances:', seances.length);
-  console.log('HomeScreen - Chargement:', isLoading);
   
-  const allerAuxSeances = () => {
+  // Navigation vers nouvelle séance
+  const creerNouvelleSeance = () => {
+    router.push('/(tabs)/nouvelle-seance');
+  };
+
+  // Navigation vers l'historique
+  const voirHistorique = () => {
     router.push('/(tabs)/explore');
   };
 
-  // Affichage de chargement
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -25,19 +30,29 @@ export default function HomeScreen() {
     );
   }
 
-  // Calculer les statistiques depuis les vraies données
+  // ========== STATISTIQUES BASÉES SUR LES SÉANCES ==========
   const totalSeances = seances.length;
-  const derniereSeance = seances[0]; // La plus récente (en premier)
+  const derniereSeance = seances[0]; // La plus récente
   
-  // Trouver l'exercice le plus fréquent
-  const exercicesCount = seances.reduce((acc, seance) => {
-    acc[seance.exercice] = (acc[seance.exercice] || 0) + 1;
+  // Calculer le nombre total d'exercices dans toutes les séances
+  const totalExercices = seances.reduce((total, seance) => {
+    return total + (seance.exercices?.length || 0);
+  }, 0);
+
+  // Trouver le type de séance le plus fréquent
+  const typeSeancesCount = seances.reduce((acc, seance) => {
+    acc[seance.nom] = (acc[seance.nom] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
   
-  const exerciceFavori = Object.keys(exercicesCount).length > 0 
-    ? Object.entries(exercicesCount).sort(([,a], [,b]) => b - a)[0][0]
-    : "Aucun pour l'instant";
+  const typeSeanceFavori = Object.keys(typeSeancesCount).length > 0 
+    ? Object.entries(typeSeancesCount).sort(([,a], [,b]) => b - a)[0][0]
+    : "Aucune pour l'instant";
+
+  // Calculer la moyenne d'exercices par séance
+  const moyenneExercicesParSeance = totalSeances > 0 
+    ? Math.round(totalExercices / totalSeances * 10) / 10 
+    : 0;
 
   return (
     <ScrollView style={styles.container}>
@@ -46,7 +61,6 @@ export default function HomeScreen() {
         <Text style={styles.title}>💪 Mon App Fitness</Text>
         <Text style={styles.subtitle}>Suivez votre progression</Text>
         
-        {/* Bouton de déconnexion */}
         <TouchableOpacity 
           style={styles.logoutButton}
           onPress={signOut}
@@ -55,18 +69,8 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* DEBUG: Affichage temporaire */}
-      <View style={[styles.card, {backgroundColor: '#ffebcc'}]}>
-        <Text style={styles.cardTitle}>🐛 DEBUG (temporaire)</Text>
-        <Text style={styles.cardText}>Séances trouvées: {seances.length}</Text>
-        <Text style={styles.cardText}>
-          Données: {seances.length > 0 ? JSON.stringify(seances[0]) : 'Aucune'}
-        </Text>
-        <Text style={styles.cardText}>Statut: {isLoading ? 'Chargement...' : 'Chargé'}</Text>
-      </View>
-
       {/* Bouton principal - Nouvelle séance */}
-      <TouchableOpacity style={styles.mainButton} onPress={allerAuxSeances}>
+      <TouchableOpacity style={styles.mainButton} onPress={creerNouvelleSeance}>
         <Text style={styles.mainButtonText}>🏋️ Nouvelle Séance</Text>
       </TouchableOpacity>
 
@@ -77,11 +81,16 @@ export default function HomeScreen() {
           <Text style={styles.noDataText}>Aucune séance enregistrée</Text>
         ) : (
           <View>
-            <Text style={styles.cardText}>Exercice: {derniereSeance.exercice}</Text>
+            <Text style={styles.cardText}>
+              <Text style={styles.bold}>{derniereSeance.nom}</Text>
+            </Text>
             <Text style={styles.cardText}>Date: {derniereSeance.date}</Text>
             <Text style={styles.cardText}>
-              {derniereSeance.series} séries × {derniereSeance.repetitions} reps à {derniereSeance.poids}kg
+              {derniereSeance.exercices?.length || 0} exercice{(derniereSeance.exercices?.length || 0) > 1 ? 's' : ''}
             </Text>
+            {derniereSeance.duree_minutes && (
+              <Text style={styles.cardText}>Durée: {derniereSeance.duree_minutes} min</Text>
+            )}
           </View>
         )}
       </View>
@@ -89,46 +98,75 @@ export default function HomeScreen() {
       {/* Statistiques rapides */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>📈 Vos Stats</Text>
-        <Text style={styles.cardText}>Total exercices: {totalSeances}</Text>
-        <Text style={styles.cardText}>Exercice favori: {exerciceFavori}</Text>
+        <Text style={styles.cardText}>Total séances: {totalSeances}</Text>
+        <Text style={styles.cardText}>Total exercices: {totalExercices}</Text>
+        <Text style={styles.cardText}>Type de séance favori: {typeSeanceFavori}</Text>
         <Text style={styles.cardText}>
+          Moyenne: {moyenneExercicesParSeance} exercice{moyenneExercicesParSeance > 1 ? 's' : ''} / séance
+        </Text>
+        <Text style={styles.motivationText}>
           {totalSeances === 0 
-            ? "Prochain objectif: Première séance !" 
-            : `Continuez comme ça ! ${totalSeances} exercice${totalSeances > 1 ? 's' : ''} fait${totalSeances > 1 ? 's' : ''}`
+            ? "🎯 Prochain objectif: Première séance !" 
+            : `🔥 Continuez comme ça ! ${totalSeances} séance${totalSeances > 1 ? 's' : ''} complétée${totalSeances > 1 ? 's' : ''}`
           }
         </Text>
       </View>
 
       {/* Boutons secondaires */}
       <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.secondaryButton} onPress={allerAuxSeances}>
+        <TouchableOpacity style={styles.secondaryButton} onPress={voirHistorique}>
           <Text style={styles.secondaryButtonText}>📝 Historique</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.secondaryButton}>
-          <Text style={styles.secondaryButtonText}>📊 Progression</Text>
+        <TouchableOpacity 
+          style={styles.secondaryButton}
+          onPress={creerNouvelleSeance}
+        >
+          <Text style={styles.secondaryButtonText}>⚡ Séance Express</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Aperçu des derniers exercices */}
+      {/* Aperçu des dernières séances */}
       {seances.length > 0 && (
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>🔥 Derniers exercices</Text>
+          <Text style={styles.cardTitle}>🔥 Dernières séances</Text>
           {seances.slice(0, 3).map((seance) => (
             <View key={seance.id} style={styles.miniSeance}>
-              <Text style={styles.miniSeanceText}>
-                {seance.exercice} - {seance.poids}kg × {seance.repetitions}
+              <View style={styles.miniSeanceHeader}>
+                <Text style={styles.miniSeanceNom}>{seance.nom}</Text>
+                <Text style={styles.miniSeanceDate}>{seance.date}</Text>
+              </View>
+              <Text style={styles.miniSeanceDetails}>
+                {seance.exercices?.length || 0} exercice{(seance.exercices?.length || 0) > 1 ? 's' : ''}
+                {seance.duree_minutes && ` • ${seance.duree_minutes} min`}
               </Text>
-              <Text style={styles.miniSeanceDate}>{seance.date}</Text>
             </View>
           ))}
           {seances.length > 3 && (
-            <TouchableOpacity onPress={allerAuxSeances}>
-              <Text style={styles.voirPlus}>Voir plus...</Text>
+            <TouchableOpacity onPress={voirHistorique}>
+              <Text style={styles.voirPlus}>Voir toutes les séances...</Text>
             </TouchableOpacity>
           )}
         </View>
       )}
+
+      {/* Message de motivation */}
+      <View style={styles.motivationCard}>
+        <Text style={styles.motivationTitle}>
+          {totalSeances === 0 
+            ? "🚀 Prêt à commencer ?" 
+            : totalSeances < 5 
+              ? "💪 Bien parti !" 
+              : "🏆 Champion en route !"
+          }
+        </Text>
+        <Text style={styles.motivationSubtext}>
+          {totalSeances === 0 
+            ? "Créez votre première séance et commencez votre parcours fitness !" 
+            : `${totalSeances} séance${totalSeances > 1 ? 's' : ''} dans votre historique. Continuez sur cette lancée !`
+          }
+        </Text>
+      </View>
     </ScrollView>
   );
 }
@@ -151,12 +189,12 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   header: {
+    alignItems: 'center',
     marginBottom: 30,
     marginTop: 20,
-    alignItems: 'center',
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 5,
@@ -164,13 +202,25 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: '#666',
+    marginBottom: 20,
+  },
+  logoutButton: {
+    backgroundColor: '#f44336',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  logoutText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   mainButton: {
     backgroundColor: '#4CAF50',
     padding: 20,
     borderRadius: 15,
     alignItems: 'center',
-    marginBottom: 25,
+    marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -179,7 +229,7 @@ const styles = StyleSheet.create({
   },
   mainButtonText: {
     color: 'white',
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
   },
   card: {
@@ -191,70 +241,103 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 2,
+    elevation: 3,
   },
   cardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 10,
+    marginBottom: 15,
   },
   cardText: {
     fontSize: 16,
-    color: '#666',
-    marginBottom: 5,
+    color: '#333',
+    marginBottom: 8,
+  },
+  bold: {
+    fontWeight: 'bold',
+    color: '#4CAF50',
   },
   noDataText: {
     fontSize: 16,
     color: '#999',
+    textAlign: 'center',
     fontStyle: 'italic',
+  },
+  motivationText: {
+    fontSize: 16,
+    color: '#4CAF50',
+    fontWeight: 'bold',
+    marginTop: 10,
+    textAlign: 'center',
   },
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 10,
+    marginBottom: 20,
   },
   secondaryButton: {
     backgroundColor: '#2196F3',
-    padding: 15,
-    borderRadius: 10,
     flex: 0.48,
+    padding: 15,
+    borderRadius: 12,
     alignItems: 'center',
   },
   secondaryButtonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
   miniSeance: {
+    backgroundColor: '#f8f9fa',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  miniSeanceHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    marginBottom: 4,
   },
-  miniSeanceText: {
-    fontSize: 14,
+  miniSeanceNom: {
+    fontSize: 16,
+    fontWeight: 'bold',
     color: '#333',
     flex: 1,
   },
   miniSeanceDate: {
     fontSize: 12,
-    color: '#999',
+    color: '#666',
   },
-  logoutButton: {
-    backgroundColor: '#f44336',
-    padding: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 15,
+  miniSeanceDetails: {
+    fontSize: 14,
+    color: '#666',
   },
   voirPlus: {
-    fontSize: 14,
-    color: '#4CAF50',
-    fontWeight: '600',
     textAlign: 'center',
+    color: '#2196F3',
+    fontSize: 14,
+    fontWeight: 'bold',
     marginTop: 10,
+  },
+  motivationCard: {
+    backgroundColor: '#e8f5e8',
+    padding: 20,
+    borderRadius: 15,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  motivationTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2e7d32',
+    marginBottom: 8,
+  },
+  motivationSubtext: {
+    fontSize: 14,
+    color: '#4caf50',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });

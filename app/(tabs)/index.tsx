@@ -1,16 +1,30 @@
 import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useData } from '../context/DataContext';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { seances } = useData();
+  const { seances, isLoading, user, signOut } = useData();
   
   // DEBUG: Affichons ce qu'on reçoit
   console.log('HomeScreen - Nombre de séances:', seances.length);
-  console.log('HomeScreen - Séances:', seances);
+  console.log('HomeScreen - Chargement:', isLoading);
   
+  const allerAuxSeances = () => {
+    router.push('/(tabs)/explore');
+  };
+
+  // Affichage de chargement
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4CAF50" />
+        <Text style={styles.loadingText}>Chargement de vos données...</Text>
+      </View>
+    );
+  }
+
   // Calculer les statistiques depuis les vraies données
   const totalSeances = seances.length;
   const derniereSeance = seances[0]; // La plus récente (en premier)
@@ -25,16 +39,20 @@ export default function HomeScreen() {
     ? Object.entries(exercicesCount).sort(([,a], [,b]) => b - a)[0][0]
     : "Aucun pour l'instant";
 
-  const allerAuxSeances = () => {
-    router.push('/(tabs)/explore');
-  };
-
   return (
     <ScrollView style={styles.container}>
       {/* En-tête */}
       <View style={styles.header}>
         <Text style={styles.title}>💪 Mon App Fitness</Text>
         <Text style={styles.subtitle}>Suivez votre progression</Text>
+        
+        {/* Bouton de déconnexion */}
+        <TouchableOpacity 
+          style={styles.logoutButton}
+          onPress={signOut}
+        >
+          <Text style={styles.logoutText}>🚪 Se déconnecter</Text>
+        </TouchableOpacity>
       </View>
 
       {/* DEBUG: Affichage temporaire */}
@@ -44,6 +62,7 @@ export default function HomeScreen() {
         <Text style={styles.cardText}>
           Données: {seances.length > 0 ? JSON.stringify(seances[0]) : 'Aucune'}
         </Text>
+        <Text style={styles.cardText}>Statut: {isLoading ? 'Chargement...' : 'Chargé'}</Text>
       </View>
 
       {/* Bouton principal - Nouvelle séance */}
@@ -119,6 +138,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
     padding: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
   },
   header: {
     marginBottom: 30,
@@ -212,6 +242,13 @@ const styles = StyleSheet.create({
   miniSeanceDate: {
     fontSize: 12,
     color: '#999',
+  },
+  logoutButton: {
+    backgroundColor: '#f44336',
+    padding: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 15,
   },
   voirPlus: {
     fontSize: 14,

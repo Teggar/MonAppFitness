@@ -68,13 +68,6 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>💪 Mon App Fitness</Text>
         <Text style={styles.subtitle}>Suivez votre progression</Text>
-        
-        <TouchableOpacity 
-          style={styles.logoutButton}
-          onPress={signOut}
-        >
-          <Text style={styles.logoutText}>🚪 Se déconnecter</Text>
-        </TouchableOpacity>
       </View>
 
       {/* Bouton principal - Nouvelle séance */}
@@ -211,17 +204,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     marginBottom: 20,
-  },
-  logoutButton: {
-    backgroundColor: '#f44336',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  logoutText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: 'bold',
   },
   mainButton: {
     backgroundColor: '#4CAF50',
